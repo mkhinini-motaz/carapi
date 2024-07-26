@@ -4,16 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCarRequest;
 use App\Http\Requests\UpdateCarRequest;
+use App\Http\Resources\ResourceCollection;
+use Illuminate\Http\Request;
 use App\Models\Car;
+use App\Repositories\CarRepository;
 
 class CarController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $page           = $request->input('page', 1);
+        $perPage        = $request->input('perPage', 20);
+        $orderBy        = $request->input('orderBy', 'created_at');
+        $search         = $request->input('search', null);
+        $orderDirection = $request->input('orderDirection', 'desc');
+
+        $shops = CarRepository::paginate($page, $perPage, $search, $orderBy, $orderDirection);
+
+        return ResourceCollection::jsonResponse($shops);
     }
 
     /**
