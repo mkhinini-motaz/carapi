@@ -30,7 +30,7 @@ class CarFactory extends Factory
 
         return [
             'agency_id' => 1,
-            'daily_price' => $faker->numberBetween(7, 15) * 10,
+            'daily_price' => $faker->numberBetween(7, 15) * 10000,
             'licence_plate' => $faker->numberBetween(240, 246) .
                 ' TN ' . $faker->numberBetween(1111, 9876),
             'serial_number' => strtoupper($faker->bothify('??##?#?#?#????#####')),

@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
             'agency_id' => $agency->id,
         ]);
 
-        Car::factory()->create([
+        Car::factory()->count(15)->create([
             'agency_id' => $agency->id,
         ]);
     }

@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('cars', function (Blueprint $table) {
             $table->id();
+     
+            // TODO: color
+
             $table->unsignedInteger('daily_price');
             $table->string('licence_plate');
             $table->string('serial_number');
