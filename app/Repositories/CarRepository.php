@@ -24,7 +24,7 @@ class CarRepository
     }
 
     /**
-     * Paginate shops
+     * Paginate cars
      *
      * @param int         $page
      * @param int         $perPage
@@ -39,7 +39,7 @@ class CarRepository
         $cars = Car::query();
 
         if (isset($search)) {
-            $cars->where(fieldsLike($search, 'name'));
+            $cars->where(fieldsLike($search, 'manufacturer', 'model_name', 'licence_plate'));
         }
 
         if (isset($orderBy) && isset($orderDirection)) {
