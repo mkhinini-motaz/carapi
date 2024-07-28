@@ -21,12 +21,14 @@ class CarController extends Controller
         $perPage        = $request->input('perPage', 20);
         $orderBy        = $request->input('orderBy', 'created_at');
         $search         = $request->input('search', null);
-        $period         = $request->input('period', []);
+        $startsAt       = $request->input('starts_at', null);
+        $endsAt         = $request->input('ends_at', null);
         $orderDirection = $request->input('orderDirection', 'desc');
 
-        $shops = CarRepository::paginate($page, $perPage, $search, $orderBy, $orderDirection, $period[0] ?? null, $period[1] ?? null);
+        $cars = CarRepository::paginate($page, $perPage, $search, $orderBy, $orderDirection, $startsAt, 
+        $endsAt);
 
-        return ResourceCollection::jsonResponse($shops);
+        return ResourceCollection::jsonResponse($cars);
     }
 
     /**

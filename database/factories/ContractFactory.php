@@ -20,7 +20,7 @@ class ContractFactory extends Factory
     {
         $DAY = 60 * 60 * 24;
         $faker = $this->faker;
-        $startsAt = strtotime($faker->date('d-m-Y'));
+        $startsAt = strtotime($faker->date('d-m') . '-' . date('Y'));
         $endsAt = $startsAt + ($faker->numberBetween(1, 15) * $DAY);
 
         $car = Car::inRandomOrder('id')->first();
