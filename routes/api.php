@@ -9,4 +9,5 @@ Route::group([ 'middleware' => 'auth',], function ($router) {
     Route::get('me', [AuthController::class, 'me']);
     
     Route::get('car', [CarController::class, 'index']);
+    Route::get('car/{carId}', [CarController::class, 'show']);
 });

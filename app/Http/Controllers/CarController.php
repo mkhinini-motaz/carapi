@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCarRequest;
 use App\Http\Requests\UpdateCarRequest;
+use App\Http\Resources\CarResource;
 use App\Http\Resources\ResourceCollection;
 use Illuminate\Http\Request;
 use App\Models\Car;
@@ -20,9 +21,10 @@ class CarController extends Controller
         $perPage        = $request->input('perPage', 20);
         $orderBy        = $request->input('orderBy', 'created_at');
         $search         = $request->input('search', null);
+        $period         = $request->input('period', []);
         $orderDirection = $request->input('orderDirection', 'desc');
 
-        $shops = CarRepository::paginate($page, $perPage, $search, $orderBy, $orderDirection);
+        $shops = CarRepository::paginate($page, $perPage, $search, $orderBy, $orderDirection, $period[0] ?? null, $period[1] ?? null);
 
         return ResourceCollection::jsonResponse($shops);
     }
@@ -46,9 +48,12 @@ class CarController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Car $car)
+    public function show($carId)
     {
-        //
+        $car = Car::with('contracts.client')
+            ->withSum('contracts as total_price', \DB::raw('(contracts.daily_price * (ends_at - starts_at) / (60 * 60 * 24))'))
+            ->findOrFail($carId);
+        return new CarResource($car);
     }
 
     /**
