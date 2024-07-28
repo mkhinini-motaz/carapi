@@ -37,6 +37,6 @@ class DatabaseSeeder extends Seeder
             'agency_id' => $agency->id,
         ]);
 
-        Contract::factory()->count(15)->create();
+        Contract::factory()->count(200)->create();
     }
 }

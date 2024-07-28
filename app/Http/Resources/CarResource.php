@@ -14,6 +14,7 @@ class CarResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        \Log::info([$this]);
         return [
             'id' => $this->id,
             
@@ -33,6 +34,8 @@ class CarResource extends JsonResource
             'circulation_tax_ends_at' => $this->circulation_tax_ends_at,
             'insurance_ends_at' => $this->insurance_ends_at,
             'technical_control_ends_at' => $this->technical_control_ends_at,
+            'total_price' => $this->total_price,
+            'contracts' => $this->whenLoaded('contracts'), // TODO: ressource collection
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

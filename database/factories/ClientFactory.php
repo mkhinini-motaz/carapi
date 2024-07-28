@@ -20,6 +20,7 @@ class ClientFactory extends Factory
             'first_name' => $this->faker->firstName,
             'last_name' => $this->faker->lastName,
             'phone' => $this->faker->phoneNumber(),
+            'gender' => $this->faker->numberBetween(1, 2),
             'birth_date' => $this->faker->date('d/m/Y'),
             'id_number' => $this->faker->creditCardNumber(),
             'driver_licence_number' => $this->faker->swiftBicNumber(),

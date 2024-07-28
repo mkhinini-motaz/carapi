@@ -23,12 +23,14 @@ class ContractFactory extends Factory
         $startsAt = strtotime($faker->date('d-m-Y'));
         $endsAt = $startsAt + ($faker->numberBetween(1, 15) * $DAY);
 
+        $car = Car::inRandomOrder('id')->first();
+
         return [
-            'daily_price' => $faker->numberBetween(7, 15) * 10000,
+            'daily_price' => $car->daily_price,
             'starts_at' => $startsAt,
             'ends_at' => $endsAt,
             'client_id' => Client::inRandomOrder('id')->first()->id,
-            'car_id' => Car::inRandomOrder('id')->first()->id,
+            'car_id' => $car->id,
         ];
     }
 }

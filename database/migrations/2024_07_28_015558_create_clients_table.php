@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('phone', 20)->unique();
             $table->string('birth_date');
+            $table->unsignedSmallInteger('gender');
             $table->string('id_number', 20);
             $table->string('driver_licence_number', 20);
             $table->string('driver_licence_delivery_date', 20);
