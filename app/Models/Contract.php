@@ -12,4 +12,14 @@ class Contract extends Model
     use HasFactory, SoftDeletes, DoesntConvertDates;
 
     protected $dateFormat = 'U';
+
+    public function car()
+    {
+        return $this->belongsTo(Car::class);
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
 }

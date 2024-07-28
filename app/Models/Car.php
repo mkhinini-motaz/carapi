@@ -24,4 +24,10 @@ class Car extends Model
     const TYPE_COMPACT = 1;
     const TYPE_SEDAN = 2;
     const TYPES = [ self::TYPE_COMPACT, self::TYPE_SEDAN ];
+
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class)
+            ->orderBy('starts_at', 'desc');
+    }
 }

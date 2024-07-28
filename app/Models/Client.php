@@ -12,4 +12,7 @@ class Client extends Model
     use HasFactory, SoftDeletes, DoesntConvertDates;
 
     protected $dateFormat = 'U';
+
+    const GENDER_MALE = 1;
+    const GENDER_FEMALE = 2;
 }
