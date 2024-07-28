@@ -149,3 +149,53 @@ function strToDate(string $str, string $date)
     return date('d-m-Y H:i', strtotime($str, strtotime($date)));
 
 }
+
+
+/**
+ * Defines a callable that creates an Eloquent where clause to find entities that occurs in period. The queried entity
+ * must have a start date and an end date column, end date may be null , applying order is optional.
+ *
+ * Return value can be used as follow :
+ *     \Illuminate\Database\Query\Builder::where(whereOccursInPeriod(...))
+ *     \Illuminate\Database\Eloquent\Model::with(['relationName' => whereOccursInPeriod(...)])
+ *
+ * @param string $startsAtColumnName  must be a valid column name in the entity using this function
+ * @param string $endsAtColumnName    must be a valid column name in the entity using this function
+ * @param int $periodStartsAt         UNIX timestamp
+ * @param int $periodEndsAt           UNIX timestamp
+ * @param string|null $orderColumn    must be a valid column name in the entity using this function
+ * @param string|null $orderDirection must be either 'asc' or 'desc'
+ *
+ * @return \Closure
+ */
+function occursInPeriod($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $orderColumn = null, $orderDirection = null)
+{
+    return function ($query) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $orderColumn, $orderDirection) {
+        $query->where(function ($mainQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+            $mainQuery->where(function ($firstQuery) use ($startsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                // starts within period
+                $firstQuery->where($startsAtColumnName, '>=', $periodStartsAt)
+                    ->where($startsAtColumnName, '<', $periodEndsAt);
+
+            })->orWhere(function ($secondQuery) use ($endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                // ends within period
+                $secondQuery->where($endsAtColumnName, '>=', $periodStartsAt)
+                    ->where($endsAtColumnName, '<', $periodEndsAt);
+
+            })->orWhere(function ($thirdQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                // starts before period, ends after it
+                $thirdQuery->where($startsAtColumnName, '<=', $periodStartsAt)
+                    ->where($endsAtColumnName, '>=', $periodEndsAt);
+
+            })->orWhere(function ($fourthQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                // starts before period's end endsAtColumn is null
+                $fourthQuery->where($startsAtColumnName, '<', $periodEndsAt)
+                    ->whereNull($endsAtColumnName);
+            });
+        });
+
+        if (isset($orderColumn)) {
+            $query->orderBy($orderColumn, isset($orderDirection) ? $orderDirection : 'asc');
+        }
+    };
+}
