@@ -29,14 +29,14 @@ class DatabaseSeeder extends Seeder
             'agency_id' => $agency->id,
         ]);
 
-        Car::factory()->count(15)->create([
+        Car::factory()->count(10)->create([
             'agency_id' => $agency->id,
         ]);
 
-        Client::factory()->count(20)->create([
+        Client::factory()->count(30)->create([
             'agency_id' => $agency->id,
         ]);
 
-        Contract::factory()->count(200)->create();
+        Contract::factory()->count(100)->create();
     }
 }

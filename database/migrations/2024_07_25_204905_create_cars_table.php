@@ -17,8 +17,8 @@ return new class extends Migration
             // TODO: color
 
             $table->unsignedInteger('daily_price');
-            $table->string('licence_plate');
-            $table->string('serial_number');
+            $table->string('licence_plate')->unique();
+            $table->string('serial_number')->unique();
             $table->string('manufacturer');
             $table->string('model_name');
             $table->unsignedSmallInteger('model_year');

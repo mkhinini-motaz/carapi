@@ -22,7 +22,7 @@ class ContractController extends Controller
         $perPage        = $request->input('perPage', 20);
         $startsAt       = $request->input('starts_at', null);
         $orderBy        = $request->input('orderBy', 'starts_at');
-        $orderDirection = $request->input('orderDirection', 'desc');
+        $orderDirection = $request->input('orderDirection', 'asc');
 
         $agency = auth()->user()->agency;
         $contracts = ContractRepository::paginate($agency, $page, $perPage, $search, $orderBy, $orderDirection, $startsAt, $endsAt);
