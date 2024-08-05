@@ -163,39 +163,89 @@ function strToDate(string $str, string $date)
  * @param string $endsAtColumnName    must be a valid column name in the entity using this function
  * @param int $periodStartsAt         UNIX timestamp
  * @param int $periodEndsAt           UNIX timestamp
- * @param string|null $orderColumn    must be a valid column name in the entity using this function
- * @param string|null $orderDirection must be either 'asc' or 'desc'
+ * @param int $periodEndsAt           UNIX timestamp
+ * @param bool $withInnerSearch
+ * @param bool $withOuterSearch
  *
  * @return \Closure
  */
-function occursInPeriod($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $orderColumn = null, $orderDirection = null)
+function occursInPeriod($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $withInnerSearch = true, $withOuterSearch = true)
 {
-    return function ($query) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $orderColumn, $orderDirection) {
-        $query->where(function ($mainQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
-            $mainQuery->where(function ($firstQuery) use ($startsAtColumnName, $periodStartsAt, $periodEndsAt) {
-                // starts within period
-                $firstQuery->where($startsAtColumnName, '>=', $periodStartsAt)
-                    ->where($startsAtColumnName, '<', $periodEndsAt);
+    if (! $withInnerSearch && ! $withOuterSearch) {
+        throw new \InvalidArgumentException('At least one of $withInnerSearch or $withOuterSearch should be true');
+    }
 
-            })->orWhere(function ($secondQuery) use ($endsAtColumnName, $periodStartsAt, $periodEndsAt) {
-                // ends within period
-                $secondQuery->where($endsAtColumnName, '>=', $periodStartsAt)
-                    ->where($endsAtColumnName, '<', $periodEndsAt);
+    return function ($query) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $withInnerSearch, $withOuterSearch) {
+        $query->where(function ($mainQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $withInnerSearch, $withOuterSearch) {
+            if ($withInnerSearch) {
+                $mainQuery->where(function ($firstQuery) use ($startsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                    // starts within period
+                    $firstQuery->where($startsAtColumnName, '>=', $periodStartsAt)
+                        ->where($startsAtColumnName, '<', $periodEndsAt);
 
-            })->orWhere(function ($thirdQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
-                // starts before period, ends after it
-                $thirdQuery->where($startsAtColumnName, '<=', $periodStartsAt)
-                    ->where($endsAtColumnName, '>=', $periodEndsAt);
+                })->orWhere(function ($secondQuery) use ($endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                    // ends within period
+                    $secondQuery->where($endsAtColumnName, '>=', $periodStartsAt)
+                        ->where($endsAtColumnName, '<', $periodEndsAt);
 
-            })->orWhere(function ($fourthQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
-                // starts before period's end endsAtColumn is null
-                $fourthQuery->where($startsAtColumnName, '<', $periodEndsAt)
-                    ->whereNull($endsAtColumnName);
-            });
+                });
+            }
+
+            if ($withOuterSearch) {
+                $mainQuery->orWhere(function ($thirdQuery) use ($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt) {
+                    // starts before period, ends after it
+                    $thirdQuery->where($startsAtColumnName, '<=', $periodStartsAt)
+                        ->where($endsAtColumnName, '>=', $periodEndsAt);
+    
+                })->orWhere(function ($fourthQuery) use ($startsAtColumnName, $endsAtColumnName, $periodEndsAt) {
+                    // starts before period's end endsAtColumn is null
+                    $fourthQuery->where($startsAtColumnName, '<', $periodEndsAt)
+                        ->whereNull($endsAtColumnName);
+                });
+            }
         });
-
-        if (isset($orderColumn)) {
-            $query->orderBy($orderColumn, isset($orderDirection) ? $orderDirection : 'asc');
-        }
     };
+}
+
+function occursInPeriodSql($startsAtColumnName, $endsAtColumnName, $periodStartsAt, $periodEndsAt, $withInnerSearch = true, $withOuterSearch = true) {
+    if (! $withInnerSearch && ! $withOuterSearch) {
+        throw new \InvalidArgumentException('At least one of $withInnerSearch or $withOuterSearch should be true');
+    }
+
+    $periodStartsAt = (int) $periodStartsAt;
+    $periodEndsAt = (int) $periodEndsAt;
+    $output = '((';
+    if ($withInnerSearch) {
+        $output .= '("' . $startsAtColumnName . '" >= ' . $periodStartsAt . ' and "' . $startsAtColumnName . '" < ' . $periodEndsAt .
+            ') or ("' . $endsAtColumnName . '" >= ' . $periodStartsAt . ' and "' . $endsAtColumnName . '" < ' . $periodEndsAt . ')';
+    }
+
+    if ($withOuterSearch) {
+        if ($withInnerSearch) {
+            $output .= ' or ';
+        }
+        $output .= '("' . $startsAtColumnName . '" <= ' . $periodStartsAt . ' and "' . $endsAtColumnName . '" >= ' . $periodEndsAt .
+            ') or ("' . $startsAtColumnName . '" < ' . $periodEndsAt . ' and "' . $endsAtColumnName . '" is null)';
+    }
+
+    $output .= '))';
+
+    return $output;
+}
+
+function availabilityWithinPeriod(int $periodStart, int $periodEnd, int $busyPeriodStart, int $busyPeriodEnd) {
+    // Busy inside period
+    if ($periodStart < $busyPeriodStart && $periodEnd > $busyPeriodEnd) {
+        return [[ $periodStart, $busyPeriodStart], [ $busyPeriodEnd, $periodEnd]];
+    }
+    //Busy in period start
+    if ($periodStart > $busyPeriodStart && $periodEnd > $busyPeriodEnd) {
+        return [[ $busyPeriodEnd, $periodEnd]];
+    }
+    // Busy in period end
+    if ($periodStart < $busyPeriodStart && $periodEnd < $busyPeriodEnd) {
+        return [[ $periodStart, $busyPeriodStart]];
+    }
+
+    return [[ $periodStart, $periodEnd ]];
 }
