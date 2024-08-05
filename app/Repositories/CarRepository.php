@@ -3,6 +3,8 @@
 namespace App\Repositories;
 
 use App\Models\Car;
+
+use function App\Support\Helpers\availabilityWithinPeriod;
 use function App\Support\Helpers\fieldsLike;
 use function App\Support\Helpers\occursInPeriod;
 
@@ -43,7 +45,9 @@ class CarRepository
         $cars = Car::query();
 
         if (isset($contractFreeOnPeriodStart) && isset($contractFreeOnPeriodEnd)) {
-            $cars->whereDoesntHave('contracts', occursInPeriod('starts_at', 'ends_at', $contractFreeOnPeriodStart, $contractFreeOnPeriodEnd));
+            $cars->wherePossiblyAvailableInPeriod($contractFreeOnPeriodStart, $contractFreeOnPeriodEnd)
+                ->withContractsInPeriod($contractFreeOnPeriodStart, $contractFreeOnPeriodEnd)
+                ->orderByContractsCountForPeriod($contractFreeOnPeriodStart, $contractFreeOnPeriodEnd);
         }
 
         if (isset($search)) {
@@ -54,6 +58,14 @@ class CarRepository
             $cars->orderBy($orderBy, $orderDirection);
         }
 
-        return $cars->paginate($perPage, [ '*' ], 'page', $page);
+        $cars = $cars->paginate($perPage, [ '*' ], 'page', $page);
+
+        if (isset($contractFreeOnPeriodStart) && isset($contractFreeOnPeriodEnd)) {
+            foreach ($cars as &$car) {
+                $car->availability_in_period = $car->availabilityInPeriod($contractFreeOnPeriodStart, $contractFreeOnPeriodEnd);
+            }
+        }
+
+        return $cars;
     }
 }

@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use function App\Support\Helpers\availabilityWithinPeriod;
+use function App\Support\Helpers\occursInPeriod;
+
 class Car extends Model
 {
     use HasFactory, SoftDeletes, DoesntConvertDates;
@@ -27,7 +30,67 @@ class Car extends Model
 
     public function contracts()
     {
-        return $this->hasMany(Contract::class)
-            ->orderBy('starts_at', 'desc');
+        return $this->hasMany(Contract::class);
+    }
+
+    public function scopeOrderByContractsCountForPeriod($query, $periodStart, $periodEnd)
+    {
+        return $query->withCount(
+            [ 'contracts' => occursInPeriod('starts_at', 'ends_at', $periodStart, $periodEnd, true, false) ]
+            )->orderBy('contracts_count', 'asc');
+    }
+
+    public function scopeWithContractsInPeriod($mainQuery, $periodStart, $periodEnd)
+    {
+        return $mainQuery->with('contracts', function($query) use ($periodStart, $periodEnd) {
+            $query->where(occursInPeriod('starts_at', 'ends_at', $periodStart, $periodEnd, true, false))
+                ->orderBy('starts_at', 'asc');
+        });
+    }
+
+    public function scopeWherePossiblyAvailableInPeriod($mainQuery, $periodStart, $periodEnd)
+    {
+        
+        return $mainQuery->where(function($query) use ($periodStart, $periodEnd) {
+            $query->whereDoesntHave(
+                'contracts', occursInPeriod('starts_at', 'ends_at', $periodStart, $periodEnd, true, true)
+            )->orWhereHas(
+                'contracts',  occursInPeriod('starts_at', 'ends_at', $periodStart, $periodEnd, true, false)
+            );
+        });
+    }
+
+    public function availabilityInPeriod($periodStart, $periodEnd)
+    {
+        $availablity = [];
+        if ($this->relationLoaded('contracts') && 0 === $this->contracts->count()) {
+            return [[ $periodStart, $periodEnd ]];
+        }
+
+        foreach ($this->contracts as $contract) {
+            if (0 === count($availablity)) {
+                $availablity = availabilityWithinPeriod($periodStart, $periodEnd, $contract->starts_at, $contract->ends_at);
+                continue;
+            }
+
+            $newAvailability = [];
+            foreach ($availablity as $availabilityPeriod) {
+                if (
+                    ($availabilityPeriod[0] >= $contract->ends_at) ||
+                    ($availabilityPeriod[1] <= $contract->starts_at)
+                ) {
+                    $newAvailability[] = $availabilityPeriod;
+                    continue;
+                }
+
+                $periods = availabilityWithinPeriod($availabilityPeriod[0], $availabilityPeriod[1], $contract->starts_at, $contract->ends_at);
+                if ($availabilityPeriod[0] === $periods[0][0] && $availabilityPeriod[1] === $periods[0][1]) {
+                    $newAvailability = array_merge($newAvailability, $periods);
+                }
+            }
+            $availablity = $newAvailability;
+        }
+
+        return $availablity;
     }
 }
