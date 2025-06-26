@@ -50,7 +50,7 @@ class Car extends Model
 
     public function scopeWherePossiblyAvailableInPeriod($mainQuery, $periodStart, $periodEnd)
     {
-        
+
         return $mainQuery->where(function($query) use ($periodStart, $periodEnd) {
             $query->whereDoesntHave(
                 'contracts', occursInPeriod('starts_at', 'ends_at', $periodStart, $periodEnd, true, true)
@@ -62,33 +62,28 @@ class Car extends Model
 
     public function availabilityInPeriod($periodStart, $periodEnd)
     {
-        $availablity = [];
         if ($this->relationLoaded('contracts') && 0 === $this->contracts->count()) {
             return [[ $periodStart, $periodEnd ]];
         }
 
+        $this->contracts->sortBy('starts_at');
+
+        $currentStart = $periodStart;
+        $availablity = [];
         foreach ($this->contracts as $contract) {
-            if (0 === count($availablity)) {
-                $availablity = availabilityWithinPeriod($periodStart, $periodEnd, $contract->starts_at, $contract->ends_at);
-                continue;
+            if ($contract->starts_at > $periodEnd) {
+                break;
             }
 
-            $newAvailability = [];
-            foreach ($availablity as $availabilityPeriod) {
-                if (
-                    ($availabilityPeriod[0] >= $contract->ends_at) ||
-                    ($availabilityPeriod[1] <= $contract->starts_at)
-                ) {
-                    $newAvailability[] = $availabilityPeriod;
-                    continue;
-                }
-
-                $periods = availabilityWithinPeriod($availabilityPeriod[0], $availabilityPeriod[1], $contract->starts_at, $contract->ends_at);
-                if ($availabilityPeriod[0] === $periods[0][0] && $availabilityPeriod[1] === $periods[0][1]) {
-                    $newAvailability = array_merge($newAvailability, $periods);
-                }
+            if ($contract->starts_at > $currentStart) {
+                $availablity[] = [$currentStart, $contract->starts_at];
             }
-            $availablity = $newAvailability;
+
+            $currentStart = max($currentStart, $contract->ends_at);
+        }
+
+        if ($currentStart < $periodEnd) {
+            $availablity[] = [$currentStart, $periodEnd];
         }
 
         return $availablity;
